@@ -56,15 +56,16 @@ where
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct MessageRequest {
     #[validate(length(
-        min = 1,
+        min = 0,
         max = 50,
-        message = "Topic ID must be between 1 and 50 characters"
+        message = "Topic ID must be between 0 and 50 characters"
     ))]
     #[validate(regex(
         path = "TOPIC_ID_REGEX",
         message = "Topic ID must contain only alphanumeric characters, hyphens, and underscores"
     ))]
-    pub topic_id: String,
+    #[serde(default)]
+    pub topic_id: Option<String>,
 
     #[validate(length(min = 1, max = 1000, message = "Must have between 1 and 1000 emails"))]
     #[validate(custom = "validate_emails")]

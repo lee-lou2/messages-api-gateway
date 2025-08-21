@@ -62,6 +62,7 @@ pub async fn create_message(
 
         // 이메일 요청 배치 삽입
         let scheduled_at = message.scheduled_at;
+        let topic_id = message.topic_id.unwrap_or(String::new());
 
         for email in &message.emails {
             let request_id = Uuid::now_v7();
@@ -70,7 +71,7 @@ pub async fn create_message(
                 "INSERT INTO email_requests (id, topic_id, to_email, content_id, scheduled_at, status, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $7)",
                 request_id,
-                message.topic_id,
+                topic_id,
                 email.trim(),
                 content_id,
                 scheduled_at,
@@ -86,7 +87,7 @@ pub async fn create_message(
         debug!(
             "📧 Created {} email requests for topic_id: {}",
             message.emails.len(),
-            message.topic_id
+            topic_id
         );
     }
 
