@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE email_requests SET status = $1, error = $2, updated_at = $3 WHERE id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Varchar",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7e739ee955a8bf21df35f3e22bc5111bfc8d82a38c9fd19b5cd25cbb46c04d18"
+}

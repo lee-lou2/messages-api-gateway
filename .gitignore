@@ -1,0 +1,41 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Database files
+sqlite.db
+
+# Go files (legacy)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+.crush/
+
+.kiro
+
+CRUSH.md

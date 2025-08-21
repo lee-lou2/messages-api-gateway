@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO email_requests (id, topic_id, to_email, content_id, scheduled_at, status, created_at, updated_at)\n                 VALUES ($1, $2, $3, $4, $5, $6, $7, $7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Timestamptz",
+        "Int2",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "65e2038d5d21e16fbbc62ac7fc55489ec5af2d48210da6ddaf94b1f56114ed2b"
+}

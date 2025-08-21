@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                status,\n                COUNT(*) as count\n            FROM email_requests \n            WHERE created_at > NOW() - INTERVAL '24 hours'\n            GROUP BY status\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "884f13552e4bf10b8c6c98c75d07724a780b77ff047220041be41108ab1a4cb3"
+}
