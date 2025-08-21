@@ -4,6 +4,7 @@ use crate::{
     error::{AppError, Result},
     models::email::EmailStatus,
 };
+use axum::body::Bytes;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -12,6 +13,7 @@ use axum::{
 };
 use chrono::Utc;
 use serde::Deserialize;
+use serde_json::Value;
 use sqlx::PgPool;
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tracing::{debug, info, warn};
@@ -181,8 +183,14 @@ pub async fn create_open_event(
 
 pub async fn create_result_event(
     State(state): State<AppState>,
-    Json(payload): Json<SnsMessage>,
-) -> Result<Json<serde_json::Value>> {
+    body: Bytes,
+) -> Result<Json<Value>> {
+    // from_slice는 바이트 슬라이스를 파싱
+    let payload: SnsMessage = serde_json::from_slice(&body).map_err(|e| {
+        warn!("Failed to parse SNS message body: {}", e);
+        AppError::Validation("Failed to parse SNS message body".to_string())
+    })?;
+
     if payload.message_type == "SubscriptionConfirmation" {
         info!(
             "SNS subscription confirmation required: {:?}",

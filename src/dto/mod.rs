@@ -1,5 +1,5 @@
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-use chrono_tz::Asia::Seoul;
+use chrono::{DateTime, Utc};
+use serde::{self, de::Error, Deserializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use validator::{Validate, ValidationError};
@@ -10,47 +10,29 @@ pub struct CreateMessageRequest {
     pub messages: Vec<MessageRequest>,
 }
 
-// Deserialize Option<DateTime<Utc>> where input may be:
-// - null => None
-// - RFC3339/ISO8601 with offset (e.g., "2025-01-01T10:00:00+09:00", "2025-01-01T01:00:00Z")
-// - naive "YYYY-MM-DD HH:MM:SS[.f]" treated as Asia/Seoul local time
-fn deserialize_kst_naive_to_utc_opt<'de, D>(
+// Deserialize Option<DateTime<Utc>>
+fn deserialize_rfc3339_to_utc_opt<'de, D>(
     deserializer: D,
 ) -> Result<Option<DateTime<Utc>>, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: Deserializer<'de>,
 {
-    // Accept either a string or null
-    let opt = Option::<String>::deserialize(deserializer)?;
-    let Some(s) = opt else { return Ok(None) };
+    // JSON 값이 null이면 None, 문자열이면 Some(String)으로 받음
+    let opt_s = Option::<String>::deserialize(deserializer)?;
+    let Some(s) = opt_s else {
+        return Ok(None); // null 값은 그대로 None으로 처리
+    };
 
-    // Try RFC3339 first
-    if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
-        return Ok(Some(dt.with_timezone(&Utc)));
+    // 문자열 s를 RFC3339 형식으로 파싱 시도
+    match DateTime::parse_from_rfc3339(&s) {
+        // 파싱 성공 시, UTC 시간으로 변환하여 반환
+        Ok(dt) => Ok(Some(dt.with_timezone(&Utc))),
+        // 파싱 실패 시, 어떤 형식을 기대했는지 명확하게 에러 메시지 반환
+        Err(e) => Err(Error::custom(format!(
+            "Invalid RFC3339 format. Expected 'YYYY-MM-DDTHH:MM:SSZ' or similar, but got '{}'. Error: {}",
+            s, e
+        ))),
     }
-
-    // Try parsing with explicit numeric offset like "+0900" without colon
-    if let Ok(dt) = DateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%:z")
-        .or_else(|_| DateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.f%:z"))
-        .or_else(|_| DateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%:z"))
-        .or_else(|_| DateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f%:z"))
-    {
-        return Ok(Some(dt.with_timezone(&Utc)));
-    }
-
-    // Fallback: naive string => interpret as Asia/Seoul
-    let naive = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
-        .or_else(|_| NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.f"))
-        .or_else(|_| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S"))
-        .or_else(|_| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f"))
-        .map_err(|e| serde::de::Error::custom(format!("invalid datetime format: {}", e)))?;
-
-    // Localize to Asia/Seoul; use single() to avoid ambiguous times (Seoul does not observe DST)
-    let local_dt = Seoul.from_local_datetime(&naive).single().ok_or_else(|| {
-        serde::de::Error::custom("ambiguous or nonexistent local time in Asia/Seoul")
-    })?;
-
-    Ok(Some(local_dt.with_timezone(&Utc)))
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
@@ -64,7 +46,7 @@ pub struct MessageRequest {
         path = "TOPIC_ID_REGEX",
         message = "Topic ID must contain only alphanumeric characters, hyphens, and underscores"
     ))]
-    #[serde(default)]
+    #[serde(default, rename = "topicId")]
     pub topic_id: Option<String>,
 
     #[validate(length(min = 1, max = 1000, message = "Must have between 1 and 1000 emails"))]
@@ -85,7 +67,11 @@ pub struct MessageRequest {
     ))]
     pub content: String,
 
-    #[serde(default, deserialize_with = "deserialize_kst_naive_to_utc_opt")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_rfc3339_to_utc_opt",
+        rename = "scheduledAt"
+    )]
     pub scheduled_at: Option<DateTime<Utc>>,
 }
 
