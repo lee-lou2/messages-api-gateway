@@ -49,3 +49,5 @@ subtle = "2.5"
 # Regex for validation
 regex = "1.10"
 lazy_static = "1.4"
+
+rmp-serde = "1.1"

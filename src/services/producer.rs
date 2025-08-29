@@ -4,13 +4,21 @@ use crate::{
     models::email::*,
 };
 use async_nats::jetstream::{self, stream::Config as StreamConfig};
-use serde_json::json;
+use serde::Serialize;
 use std::time::Duration;
 use tracing::{error, info};
 
 pub struct ProducerService {
     jetstream: jetstream::Context,
     subject: String,
+}
+
+#[derive(Serialize)]
+pub struct EmailPublishPayload {
+    uuid: String,
+    email: String,
+    subject: String,
+    body: String,
 }
 
 impl ProducerService {
@@ -55,16 +63,15 @@ impl ProducerService {
     ) -> Result<()> {
         let content_with_tracking = request.content_with_tracking(server_host);
 
-        let payload = json!({
-            "uuid": request.id,
-            "email": request.to_email,
-            "subject": request.subject.as_deref().unwrap_or(""),
-            "body": content_with_tracking,
-            "topic_id": request.topic_id,
-            "timestamp": chrono::Utc::now(),
-        });
+        let payload = EmailPublishPayload {
+            uuid: request.id.to_string(),
+            email: request.to_email.clone(),
+            subject: request.subject.as_deref().unwrap_or("").to_string(),
+            body: content_with_tracking,
+        };
 
-        let payload_bytes = serde_json::to_vec(&payload)?;
+        let payload_bytes =
+            rmp_serde::to_vec(&payload).map_err(|e| AppError::Nats(e.to_string()))?;
 
         match self
             .jetstream
